@@ -1,0 +1,60 @@
+#+TITLE: Modelagem de Sistemas Lineares
+#+DATE: 21 de Abril de 2026
+#+AUTHOR: Gabriel G. de Brito
+#+BIBLIOGRAPHY: references.bib
+#+CITE_EXPORT: biblatex backend=bibtex,style=numeric
+
+* Introdução ao Problema
+O Problema a ser modelado e solucionado consiste em encontrar uma quantidade diária de comprimidos a ser consumido por uma pessoa de modo a minimizar o custo. Cada comprimido possui certa quantidade de diferentes componentes que a pessoa deve ingerir, e certa quantidade de componentes que ela não pode ingerir em excesso.
+
+O programa implementado recebe a quantidade diária a ser ingerida dos componentes, a lista de comprimidos com as quantidades de cada componente em cada comprimido e o seu preço, e uma lista de componentes que a pessoa não pode ingerir em excesso, com seus limites diários.
+
+* Modelagem
+Sejam:
++ c o total de componentes nos comprimidos;
++ \( q_1 .. q_c \) as quantidades diárias de cada componente;
++ p o número de tipos de comprimido;
++ \( r_{11} .. r_{pc} \) as quantidades de cada componente em cada comprimido;
++ \( v_1 .. v_p \) os preços de cada comprimido;
++ k o número de componentes limitados;
++ \( l_1 .. l_k \) os respectivos limites;
++ \( x_i \) a quantidade de cada comprimido a ser tomada (o que queremos descobrir).
+
+Queremos minimizar \( \sum_{i = 1}^{p} v_i \), restringindo:
++ \(\forall x \in [1..c] \sum_{i = 1}^{p} q_i >= q_x\)
++ \(\forall x \in [1..k] \sum_{i = 1}^{p} q_i <= l_x\)
+
+* Implementação
+O programa foi implementado em Haskell. Ele recebe como entrada os parâmetros do problema e retorna como saída o programa linear, no formato do ~lp_solve~.[cite:@lpsolve]
+
+A função ~main~ realiza todo o input e output, tornando o resto do programa apenas funções puras. Cada parte do programa linear é gerada por uma função:
++ ~objFunc~ gera a função objetivo;
++ ~dailyComponent~ gera as restrições positivas;
++ ~limitComponent~ gera as restrições negativas;
++ ~nonNegative~ gera as restrições de váriaveis não-negativas;
++ ~decls~ gera a declaração de váriaveis inteiras.
+
+Exemplo de uso ($ indica um comando da shell, < indica input e > indica output):
+
+#+BEGIN_SRC bash
+$ ./comprimidos
+< 3 2
+< 10 5 0
+< 5 1 0 2
+< 2 4 1 3
+< 1
+< 3 0
+> min: 2 x1 + 3 x2;
+> 5 x1 + 2 x2 >= 10;
+> 1 x1 + 4 x2 >= 5;
+> 1 x2 >= 0;
+> 1 x2 <= 0;
+> x1 >= 0;
+> x2 >= 0;
+> int x1, x2;
+#+END_SRC
+
+* Inviabilidade
+O programa é inviável quando um componente limitado impede qualquer possível solução de possuir mais que o mínimo necessário de um componente (possivelmente ele próprio).
+
+#+PRINT_BIBLIOGRAPHY:
