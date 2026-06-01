@@ -34,19 +34,30 @@
 (defmacro result-sum (result)
   `(car (cdr ,result)))
 
+(defmacro result-is-better? (a b)
+  `(> (result-sum ,a) (result-sum ,b)))
+
 (defun get-best-auction (results current)
-  (when (not (null results))
-    (get-best-auction
-     (cdr results)
-     (if (is-better? (car results) current)
-	 (car results)
-	 (current)))))
+  (if (not (null results))
+      (get-best-auction
+       (cdr results)
+       (if (result-is-better? (car results) current)
+	   (car results)
+	   (current)))
+      current))
+
+(defun make-auction-branches (matrix idx indices sum)
+  (if (null this-line)
+      '()
+      (cons (make-auction-branch matrix idx indices sum)
+	    (make-auction-branches
+	     (cdr this-line) remaining (+ idx 1) indices sum))))
+
+(defmacro auction-branches (matrix indices sum)
+  `(make-auction-branches (car matrix) (cdr matrix) 0 indices sum))
 
 (defmacro best-auction (results)
   `(get-best-auction (cdr ,results) (car ,results)))
-
-(defun auction-branches (matrix indices sum)
-  )
 
 (defun auction-solver (matrix indices sum)
   (if (null matrix)
