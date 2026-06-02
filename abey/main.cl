@@ -34,6 +34,7 @@
 (defmacro result-sum (result)
   `(car (cdr ,result)))
 
+;; Why tfk somewhere result is arriving here with two symbols instead of values?
 (defmacro result-is-better? (a b)
   `(> (result-sum ,a) (result-sum ,b)))
 
@@ -46,18 +47,25 @@
 	   (current)))
       current))
 
-(defun make-auction-branches (matrix idx indices sum)
+(defun make-auction-branch (this-line remaining-matrix idx indices sum)
+  (auction-solver
+   remaining-matrix
+   (cons idx indices)
+   (+ sum
+      (car this-line))))
+
+(defun make-auction-branches (this-line remaining-matrix idx indices sum)
   (if (null this-line)
       '()
-      (cons (make-auction-branch matrix idx indices sum)
-	    (make-auction-branches
-	     (cdr this-line) remaining (+ idx 1) indices sum))))
+      (cons (make-auction-branch this-line remaining-matrix idx indices sum)
+	    (make-auction-branches (cdr this-line) remaining-matrix
+				   (+ idx 1) indices sum))))
 
 (defmacro auction-branches (matrix indices sum)
-  `(make-auction-branches (car matrix) (cdr matrix) 0 indices sum))
+  `(make-auction-branches (car ,matrix) (cdr ,matrix) 0 ,indices ,sum))
 
-(defmacro best-auction (results)
-  `(get-best-auction (cdr ,results) (car ,results)))
+(defun best-auction (results)
+  (get-best-auction (cdr results) (car results)))
 
 (defun auction-solver (matrix indices sum)
   (if (null matrix)
@@ -75,5 +83,5 @@
   (when (member "-o" *args*)
     (set 'cut-by-optimality nil))
 
-  ;; Transpose the matrix as it's semantically better.
+  ;; We transpose the matrix as it's semantically better.
   (print (abey (transpose (read-matrix (read) (read))))))
