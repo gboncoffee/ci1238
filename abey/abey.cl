@@ -1,5 +1,5 @@
 #!/bin/env clisp
 
-(load "abey.cl")
+(load "main.cl")
 
 (main)

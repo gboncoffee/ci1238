@@ -25,21 +25,21 @@
       '()
       (cons (mapcar #'car matrix) (transpose (mapcar #'cdr matrix)))))
 
-(defmacro result (indices sum)
-  '`(,indices ,sum))
+(defun result (indices sum)
+  `(,indices ,sum))
 
-(defmacro result-indices (result)
-  `(car ,result))
+(defun result-indices (result)
+  (car result))
 
-(defmacro result-sum (result)
-  `(car (cdr ,result)))
+(defun result-sum (result)
+  (car (cdr result)))
 
 (defun check-viability (indices)
   (unless (member (car indices) (cdr indices))
     (check-viability (cdr indices))))
 
-(defmacro viable (result)
-  `(check-viability (result-indices ,result)))
+(defun viable (result)
+  (check-viability (result-indices result)))
 
 (defun result-is-better? (a b)
   (> (result-sum a) (result-sum b)))
@@ -53,6 +53,11 @@
 	   current))
       current))
 
+(defun concat-lists (a b)
+  (if (null a)
+      b
+      (cons (car a) (concat-lists (cdr a) b))))
+
 (defun make-auction-branch (this-line remaining-matrix idx indices sum)
   (if (not cut-by-viability)
       (auction-solver
@@ -61,7 +66,7 @@
        (+ sum
 	  (car this-line)))
       (if (member idx indices)
-	  (result indices sum)
+	  `(,indices ,sum)
 	  (auction-solver
 	   remaining-matrix
 	   (cons idx indices)
@@ -75,8 +80,8 @@
 	    (make-auction-branches (cdr this-line) remaining-matrix
 				   (+ idx 1) indices sum))))
 
-(defmacro auction-branches (matrix indices sum)
-  `(make-auction-branches (car ,matrix) (cdr ,matrix) 0 ,indices ,sum))
+(defun auction-branches (matrix indices sum)
+  (make-auction-branches (car matrix) (cdr matrix) 0 indices sum))
 
 (defun best-auction (results)
   (get-best-auction (cdr results) (car results)))
@@ -90,7 +95,7 @@
 
 (defun auction-solver (matrix indices sum)
   (if (null matrix)
-      (result indices sum)
+      `(,indices ,sum)
       (best-auction
        (if cut-by-viability
 	   (auction-branches matrix indices sum)
@@ -102,7 +107,7 @@
 (defun print-indices (indices &optional p)
   (let ((tp (or p 1)))
     (unless (null indices)
-      (format t "~d ~d~%" tp (car indices))
+      (format t "~d ~d~%" tp (+ 1 (car indices)))
       (print-indices (cdr indices) (+ tp 1)))))
 
 (defun print-sum (sum)
@@ -116,10 +121,15 @@
   (when (member "-o" *args*)
     (set 'cut-by-optimality nil))
 
-  ;; We transpose the matrix as it's semantically better. We store the
+  ;; We transpose the matrix as it's semantically better.
   (let ((result (abey (transpose (read-matrix (read) (read))))))
     ;; We revert the indices as this list is constructed reverted.
     (let ((indices (reverse (result-indices result)))
 	  (sum (result-sum result)))
       (print-indices indices)
       (print-sum sum))))
+
+(defun self-reload ()
+  (load "main.cl")
+  (format t "~%")
+  (main))
