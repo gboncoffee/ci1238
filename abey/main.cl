@@ -35,8 +35,11 @@
   (car (cdr result)))
 
 (defun check-viability (indices)
-  (unless (member (car indices) (cdr indices))
-    (check-viability (cdr indices))))
+  (if (null indices)
+      t
+      (if (member (car indices) (cdr indices))
+	  nil
+	  (check-viability (cdr indices)))))
 
 (defun viable (result)
   (check-viability (result-indices result)))
@@ -58,31 +61,6 @@
       b
       (cons (car a) (concat-lists (cdr a) b))))
 
-(defun make-auction-branch (this-line remaining-matrix idx indices sum)
-  (if (not cut-by-viability)
-      (auction-solver
-       remaining-matrix
-       (cons idx indices)
-       (+ sum
-	  (car this-line)))
-      (if (member idx indices)
-	  `(,indices ,sum)
-	  (auction-solver
-	   remaining-matrix
-	   (cons idx indices)
-	   (+ sum
-	      (car this-line))))))
-
-(defun make-auction-branches (this-line remaining-matrix idx indices sum)
-  (if (null this-line)
-      '()
-      (cons (make-auction-branch this-line remaining-matrix idx indices sum)
-	    (make-auction-branches (cdr this-line) remaining-matrix
-				   (+ idx 1) indices sum))))
-
-(defun auction-branches (matrix indices sum)
-  (make-auction-branches (car matrix) (cdr matrix) 0 indices sum))
-
 (defun best-auction (results)
   (get-best-auction (cdr results) (car results)))
 
@@ -93,16 +71,37 @@
 	  (cons (car results) (filter-viable (cdr results)))
 	  (filter-viable (cdr results)))))
 
-(defun auction-solver (matrix indices sum)
-  (if (null matrix)
-      `(,indices ,sum)
-      (best-auction
-       (if cut-by-viability
-	   (auction-branches matrix indices sum)
-	   (filter-viable (auction-branches matrix indices sum))))))
+;; (defun insert-index (value idx results)
+;;   (result (cons idx (result-indices results))
+;; 	  (+ (result-sum results) value)))
+;; We don't have to insert the index in the best result, we have to try
+;; inserting it on all results and try without inserting it also.
+
+(defun insert-indices-cutting (this-line idx result)
+  ;; TODO.
+  (insert-indices this-line idx result))
+
+(defun insert-indices (this-line idx result)
+  (if (null this-line)
+      '()
+      (cons (insert-index (car this-line) idx result)
+	    (insert-indices (cdr this-line) (+ 1 idx) result))))
+
+(defun auction-solver (matrix results)
+  (get-best-auction
+   (if (null matrix)
+       results
+       (let ((rest (auction-solver (cdr matrix) results)))
+	 (cons rest
+	       (concat-lists
+		results
+		(if cut-by-viability
+		    (insert-indices-cutting (car matrix) 0 rest)
+		    (filter-viable (insert-indices (car matrix) 0 rest)))))))
+   (result '() 0)))
 
 (defun abey (matrix)
-  (auction-solver matrix '() 0))
+  (auction-solver matrix `(,(result '() 0))))
 
 (defun print-indices (indices &optional p)
   (let ((tp (or p 1)))
