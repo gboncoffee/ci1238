@@ -47,6 +47,10 @@
 (defun result-is-better? (a b)
   (> (result-sum a) (result-sum b)))
 
+(defun add-to-result (r idx value)
+  (result (cons idx (result-indices r))
+	  (+ value (result-sum r))))
+
 (defun get-best-auction (results current)
   (if (not (null results))
       (get-best-auction
@@ -56,57 +60,45 @@
 	   current))
       current))
 
-(defun concat-lists (a b)
-  (if (null a)
-      b
-      (cons (car a) (concat-lists (cdr a) b))))
-
 (defun best-auction (results)
   (get-best-auction (cdr results) (car results)))
 
-(defun filter-viable (results)
+(defun auction-solver (value idx remaining r)
+  (let ((new-result (add-to-result r idx value)))
+    (best-auction (run-abey (car remaining) 1 (cdr remaining) new-result))))
+
+(defun filter-viable-impl (results)
   (if (null results)
       '()
-      (if (viable (car results))
-	  (cons (car results) (filter-viable (cdr results)))
-	  (filter-viable (cdr results)))))
+      (let ((r (car results))
+	    (rest (filter-viable-impl (cdr results))))
+	(if (viable r)
+	    (cons r rest)
+	    rest))))
 
-;; (defun insert-index (value idx results)
-;;   (result (cons idx (result-indices results))
-;; 	  (+ (result-sum results) value)))
-;; We don't have to insert the index in the best result, we have to try
-;; inserting it on all results and try without inserting it also.
+(defun filter-viable (results)
+  (if cut-by-viability
+      results
+      (filter-viable-impl results)))
 
-(defun insert-indices-cutting (this-line idx result)
-  ;; TODO.
-  (insert-indices this-line idx result))
-
-(defun insert-indices (this-line idx result)
+(defun run-abey (this-line idx remaining r)
   (if (null this-line)
-      '()
-      (cons (insert-index (car this-line) idx result)
-	    (insert-indices (cdr this-line) (+ 1 idx) result))))
-
-(defun auction-solver (matrix results)
-  (get-best-auction
-   (if (null matrix)
-       results
-       (let ((rest (auction-solver (cdr matrix) results)))
-	 (cons rest
-	       (concat-lists
-		results
-		(if cut-by-viability
-		    (insert-indices-cutting (car matrix) 0 rest)
-		    (filter-viable (insert-indices (car matrix) 0 rest)))))))
-   (result '() 0)))
+      `(,r)
+      (filter-viable
+       (let ((this-branch
+	      (auction-solver (car this-line) idx remaining r))
+	     (rest (run-abey (cdr this-line) (+ 1 idx) remaining r)))
+	 (if (or (not cut-by-viability) (viable this-branch))
+	     (cons this-branch rest)
+	     rest)))))
 
 (defun abey (matrix)
-  (auction-solver matrix `(,(result '() 0))))
+  (best-auction (run-abey (car matrix) 1 (cdr matrix) (result '() 0))))
 
 (defun print-indices (indices &optional p)
   (let ((tp (or p 1)))
     (unless (null indices)
-      (format t "~d ~d~%" tp (+ 1 (car indices)))
+      (format t "~d ~d~%" tp (car indices))
       (print-indices (cdr indices) (+ tp 1)))))
 
 (defun print-sum (sum)
@@ -120,13 +112,10 @@
   (when (member "-o" *args*)
     (set 'cut-by-optimality nil))
 
-  ;; We transpose the matrix as it's semantically better.
-  (let ((result (abey (transpose (read-matrix (read) (read))))))
-    ;; We revert the indices as this list is constructed reverted.
-    (let ((indices (reverse (result-indices result)))
-	  (sum (result-sum result)))
-      (print-indices indices)
-      (print-sum sum))))
+  (let ((result (abey (read-matrix (read) (read)))))
+    ;; The indices list is created reversed, so we reverse it again.
+    (print-indices (reverse (result-indices result)))
+    (print-sum (result-sum result))))
 
 (defun self-reload ()
   (load "main.cl")
